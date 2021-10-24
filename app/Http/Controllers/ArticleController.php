@@ -2,24 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class ArticleController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
         $this->validate($request, $this->rules());
@@ -39,24 +27,18 @@ class ArticleController extends Controller
     {
         /** @var Article $article */
         $article = Article::query()->findOrFail($articleId);
-//        dd($article);
         if ($article->user_id !== Auth::id())
-            abort('unauthorized');
+            abort(403, 'unauthorized');
 
-        else{
         $this->validate($request, $this->rules());
         $article->update([
             'title' => $request->post('title'),
             'content' => $request->post('content'),
         ]);
-
         return response()->json([
             'success' => true,
-            'message' => 'artical updated successfully',
-            'code' => 200
+            'message' => 'article updated successfully',
         ]);
-
-        }
     }
 
     public function delete(Request $request, $articleId)
@@ -64,22 +46,25 @@ class ArticleController extends Controller
         /** @var Article $article */
         $article = Article::query()->findOrFail($articleId);
         if ($article->user_id !== Auth::id())
-            abort('unauthorized');
+            abort(403, 'unauthorized');
+
         $article->delete();
         return response()->json([
             'success' => true,
-            'message' => 'artical deleted  successfully',
-            'code' => 200
+            'message' => 'article deleted successfully',
         ]);
     }
 
     public function rules()
     {
-        return [
+        return array_merge([
             'title' => 'required|array',
-            'title.*' => 'required|string|min:4',
             'content' => 'required|array',
-            'content.*' => 'required|string',
-        ];
+        ], collect(array_map(function ($locale) {
+            return [
+                "title.$locale" => 'required|string|min:4',
+                "content.$locale" => 'required|string',
+            ];
+        }, locales()))->collapse()->toArray());
     }
 }

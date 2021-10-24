@@ -17,8 +17,8 @@ class ArticleResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'title' => @$this->title[$request->get('lang', 'ar')],
-            'content' => @$this->content[$request->get('lang', 'ar')],
+            'title' => @$this->title[current_locale()],
+            'content' => @$this->content[current_locale()],
             'created_at' => $this->created_at,
         ];
     }

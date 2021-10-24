@@ -8,23 +8,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        //
-    }
-
     public function login(Request $request)
     {
         $email = $request->post('email');
@@ -41,7 +29,6 @@ class AuthController extends Controller
             $user->update(['api_token' => $token]);
             return response()->json([
                 'success' => true,
-                'code' => 200,
                 'api_token' => $token
             ]);
         } else
@@ -72,17 +59,21 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $this->validate($request, [
+        $this->validate($request, array_merge([
             'name' => 'required|array',
-            'name.*' => 'required|string|max:128',
             'email' => 'required|unique:users|email',
             'phone' => 'required|numeric|unique:users',
             'password' => 'required',
-        ]);
+        ], collect(array_map(function ($locale) {
+            return [
+                "name.$locale" => 'required|string|max:128',
+            ];
+        }, locales()))->collapse()->toArray()));
 
         $otpHash = 'otp_' . $request->post('otp_id');
         if (Cache::missing($otpHash))
-            return 'faild json otp_id not valid';
+            return response()->json(['success' => false, 'error' => 'otp hash invalid'], 400);
+
         $otp = Cache::get($otpHash);
         if ($request->post(@$otp['type']) === @$otp['id'] && $request->post('otp') === @$otp['otp']) {
             $password = Hash::make($request->post('password'));
@@ -93,18 +84,15 @@ class AuthController extends Controller
             do {
                 $token = Str::random(64);
             } while (User::query()->where('api_token', $token)->count() > 0);
-
             $user->update(['api_token' => $token]);
             return response()->json([
                 'success' => true,
-                'code' => 200,
                 'api_token' => $token
             ]);
         }
         return response()->json([
             'success' => false,
-            'code' => 400,
             'message' => 'invalid otp'
-        ]);
+        ], 401);
     }
 }

@@ -18,7 +18,7 @@ class UserViewResource extends JsonResource
         return [
             'success' => true,
             'data' => [
-                'name' => $this->name[$request->get('lang', 'ar')],
+                'name' => $this->name[current_locale()],
                 'phone' => $this->phone,
                 'email' => $this->email,
                 'articles' => $this->whenLoaded('articles', ArticleResource::collection($this->articles))
